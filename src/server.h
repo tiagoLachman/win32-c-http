@@ -13,9 +13,10 @@ typedef struct {
 } RESPONSE;
 
 #define REQUEST_SIZE 4096
-#define DEFAULT_PORT 80
+#define DEFAULT_PORT 8080
 
-#undef DELETE
+// why this undef?
+//#undef DELETE
 enum { RQ_UNDEF,GET,POST,PUT } response_types;
 
 extern const char *DEFAULT_ERROR_404;

@@ -2,7 +2,31 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
 #include "server.h"
+
+DWORD WINAPI threadClient(SOCKET _socket, SOCKET _msg_sock, struct sockaddr_in *_client_addr)
+{
+    SOCKET sock = _socket;
+    SOCKET msg_sock = _msg_sock;
+    struct sockaddr_in client_addr = *_client_addr;
+
+    if (msg_sock == INVALID_SOCKET || msg_sock == -1)
+        error_die("accept()");
+
+    printf("Connected to %s:%d\n", inet_ntoa(client_addr.sin_addr), htons(client_addr.sin_port));
+
+    REQUEST *request = GetRequest(msg_sock);
+    printf("Client requested %d %s\n", request->type, request->value);
+
+    //if (request->length == 0)
+
+    RESPONSE *response = GetResponse(request);
+    int sent = SendResponse(msg_sock, response);
+
+    closesocket(msg_sock);
+    return 0;
+}
 
 int main(int argc, char **argv)
 {
@@ -16,9 +40,9 @@ int main(int argc, char **argv)
         error_die("WSAStartup()");
 
     // Fill in the address structure
-    local.sin_family        = AF_INET;
-    local.sin_addr.s_addr   = INADDR_ANY;
-    local.sin_port          = htons(DEFAULT_PORT);
+    local.sin_family = AF_INET;
+    local.sin_addr.s_addr = INADDR_ANY;
+    local.sin_port = htons(DEFAULT_PORT);
 
     sock = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -26,7 +50,11 @@ int main(int argc, char **argv)
         error_die("socket()");
 
     if (bind(sock, (struct sockaddr *)&local, sizeof(local)) == SOCKET_ERROR)
+    {
         error_die("bind()");
+    }
+
+    printf("Hosted on %s:%d\n", inet_ntoa(local.sin_addr), htons(local.sin_port));
 
 listen_goto:
 
@@ -39,8 +67,9 @@ listen_goto:
 
     forever
     {
+        printf("Aguardando cliente\n");
         addr_len = sizeof(client_addr);
-        msg_sock = accept(sock, (struct sockaddr*)&client_addr, &addr_len);
+        msg_sock = accept(sock, (struct sockaddr *)&client_addr, &addr_len);
 
         if (msg_sock == INVALID_SOCKET || msg_sock == -1)
             error_die("accept()");
@@ -63,7 +92,6 @@ listen_goto:
             break;
         else if (sent == -1)
             goto listen_goto;
-
     }
 
     WSACleanup();
